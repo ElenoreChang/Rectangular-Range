@@ -1,0 +1,163 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=gb2312" />
+
+        <title>地图矩形测距</title>
+
+        <script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?sensor=false"></script>
+        <script type="text/javascript">
+        function iniz(){
+            var myLatlng = new google.maps.LatLng(36.65122,117.12); //济南经纬度
+            var myOptions = {
+            zoom : 7,
+            center : myLatlng,
+            mapTypeId : google.maps.MapTypeId.ROADMAP 
+            }
+
+            var map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+
+            //设置了标志
+            var marker = new google.maps.Marker({
+                position : myLatlng,
+                map : map,
+                title : "hello,world"
+            }
+            );
+
+            //多边形
+            var rectangle = new google.maps.Rectangle();
+            var rectOptions = {
+                strokeColor : "#ff0000",
+                strokeOpacity : 0.8,
+                strokeWeight : 2,
+                fillColor : "#ff0000",
+                fillOpacity : 0.35,
+                map : map,
+                clickable : false,
+                bounds : map.getBounds()
+            };
+
+            var beginlatlng = "";//记录起初点坐标
+            var endlatlng = "";//记录结束点坐标
+            var rectBounds = "";
+            var SfClick = "";
+            var SfMove = "";
+            var ClickCount = 0;//点击次数
+            var dx = document.getElementById("dx").value; 
+            var dy = document.getElementById("dy").value;
+
+            SfClick = google.maps.event.addListener(map,'click',function(e){
+                var begin = e.latLng;
+                ClickCount++;
+                if(ClickCount == 1){
+                    SfMove = google.maps.event.addListener(map,"mousemove",function(e){
+                        beginlatlng = begin;
+                        endlatlng = e.latLng;
+                        rectOptions.bounds = new google.maps.LatLngBounds(beginlatlng,endlatlng);
+                        rectOptions.map = map;
+                        rectangle.setOptions(rectOptions);
+                    });
+                }
+                else{
+                    google.maps.event.removeListener(SfMove);
+                    if(window.confirm("确定该电子围栏范围？")){
+                        ClickCount = 0;
+                        //alert('起初坐标点'+beginlatlng+'\n介绍坐标点'+endlatlng);
+                        document.getElementById( "lat_nw").value = beginlatlng.lat();
+                        document.getElementById( "lng_nw").value = beginlatlng.lng();
+
+                        document.getElementById( "lat_se").value = endlatlng.lat();
+                        document.getElementById( "lng_se").value = endlatlng.lng();
+
+                        document.getElementById( "lat_cen").value = (endlatlng.lat() + beginlatlng.lat()) / 2;
+                        document.getElementById( "lng_cen").value = (endlatlng.lng() + beginlatlng.lng()) / 2;
+
+
+                    }
+                    else{
+                        ClickCount = 0;
+                        rectOptions.map = null;
+                        rectangle.setOptions(rectOptions);
+                    }
+                }
+            });
+        }
+
+        function rad(d){
+
+        return d * Math.PI / 180.0;
+
+        }
+
+        function GetDistance( lat1,  lng1,  lat2,  lng2){
+            
+            var radLat1 = rad(lat1);
+            var radLat2 = rad(lat2);
+            var a = radLat1 - radLat2;
+            var  b = rad(lng1) - rad(lng2);
+            var s = 2 * Math.asin(Math.sqrt(Math.pow(Math.sin(a/2),2) +
+            Math.cos(radLat1)*Math.cos(radLat2)*Math.pow(Math.sin(b/2),2)));
+            s = s *6378.137 ;// EARTH_RADIUS;
+            s = Math.round(s * 10000) / 10000;
+            return s;
+        }
+
+        function calDis(){
+            var lat_nw = document.getElementById( "lat_nw").value * 1;
+            var lat_se = document.getElementById( "lat_se").value * 1;
+            var lng_nw = document.getElementById( "lng_nw").value * 1;
+            var lng_se = document.getElementById( "lng_se").value * 1;
+            var dis_ns =  GetDistance(lat_nw, lng_se, lat_se, lng_se);
+            var dis_ew =  GetDistance(lat_se, lng_nw, lat_se, lng_se);
+            document.getElementById( "distance_ew").value = dis_ew;
+            document.getElementById( "distance_ns").value = dis_ns;
+
+        }
+
+        function calGrid() {
+            var dis_ew =  document.getElementById("distance_ew").value * 1;
+            var dis_ns =  document.getElementById("distance_ns").value * 1;
+            var dx = document.getElementById("dx").value * 1;
+            var dy = document.getElementById("dy").value * 1;
+
+            var e_we = Math.round(dis_ew / dx) + 1;
+            var e_sn = Math.round(dis_ns / dy) + 1;
+
+            document.getElementById( "e_we").value = e_we;
+            document.getElementById( "e_sn").value = e_sn;
+        }
+        </script>
+    </head>
+
+    <body onload = "iniz()">
+        <div id = "map_canvas" style = "float: left; width : 500px; height : 500px"></div>
+
+        <div id = "domain_value" style = "margin-left : 550px; width : 600px">
+                
+                西北：纬度<input type="text" name="lat_nw" id="lat_nw" />
+                   经度<input type="text" name="lng_nw" id="lng_nw" />
+                <br /><br />
+                东南：纬度<input type="text" name="lat_se" id="lat_se" />
+                   经度<input type="text" name="lng_se" id="lng_se" />
+                <br /><br />
+                中心：纬度<input type="text" name="lat_cen" id="lat_cen" />
+                   经度<input type="text" name="lng_cen" id="lng_cen" />
+                <button type="button" onclick="calDis()">计算区域距离</button>
+                <br /><br />
+
+                东西向距离=<input type="text" name="distance_ew" id="distance_ew" /> km 
+                <br /><br />
+                南北向距离=<input type="text" name="distance_ns" id="distance_ns" " /> km 
+                <br /><br />
+
+                dx: <input type = "text" name = "dx" id = 'dx'/> km
+                dy: <input type = "text" name = "dy" id = 'dy'/> km
+                <button type="button" onclick="calGrid()">计算矢量场栅格数</button>
+                <br /><br />
+
+                e_we : <input type = "text" name = "e_we" id = 'e_we' "/>
+                e_sn : <input type = "text" name = "e_sn" id = 'e_sn' "/>
+        </div>
+    </body>
+</html>
